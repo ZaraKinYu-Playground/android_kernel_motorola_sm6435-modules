@@ -6,10 +6,6 @@ LINUXINCLUDE += -include $(MSM_HW_FENCE_ROOT)/config/kalamammdriversconf.h \
 		-I$(MSM_HW_FENCE_ROOT)hw_fence/include/
 
 ifdef CONFIG_QTI_HW_FENCE
-ccflags-y += \
-		-I$(MSM_HW_FENCE_ROOT)../synx-kernel/include/uapi/synx/media \
-		-I$(MSM_HW_FENCE_ROOT)../synx-kernel/msm/synx
-
 obj-m += msm_hw_fence.o
 
 msm_hw_fence-y := src/msm_hw_fence.o \
@@ -26,6 +22,7 @@ endif
 
 msm_hw_fence-$(CONFIG_DEBUG_FS) += src/hw_fence_ioctl.o
 
+CDEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"
 endif
 EXTRA_CFLAGS += -Wformat-extra-args -Wstrict-prototypes -Wformat-insufficient-args \
 		-Wformat-invalid-specifier -Wformat-zero-length -Wnonnull
