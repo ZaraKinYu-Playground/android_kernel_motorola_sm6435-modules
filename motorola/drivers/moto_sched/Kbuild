@@ -10,6 +10,7 @@ ifneq ($strip($(LINUX_KERNEL_VERSION)),)
 EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/$(LINUX_KERNEL_VERSION)
 endif
 EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/drivers/moto_sched
+EXTRA_CFLAGS += -I$(srctree)
 
 ifneq ($(filter m y,$(CONFIG_MTK_SCHED_VIP_TASK)),)
 EXTRA_CFLAGS += -I$(ANDROID_BUILD_TOP)/kernel-6.1
