@@ -1,7 +1,7 @@
 # add -Wall to try to catch everything we can.
 EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/drivers/power/pogo_pen_charger
-EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/include
+EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm6435-modules/motorola/drivers/power/pogo_pen_charger
+EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm6435-modules/motorola/include
 
 obj-m += pogo_pen_charger.o
 

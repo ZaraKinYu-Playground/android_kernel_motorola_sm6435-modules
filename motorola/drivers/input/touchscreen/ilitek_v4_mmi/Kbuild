@@ -1,8 +1,8 @@
 # add -Wall to try to catch everything we can.
 EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/include \
-		-I$(KERNEL_SRC)/../sm8450-modules/motorola/drivers/input/touchscreen/ilitek_v4_mmi \
-		-I$(KERNEL_SRC)/../sm8450-modules/motorola/drivers/input/touchscreen/ilitek_v4_mmi/firmware
+EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm6435-modules/motorola/include \
+		-I$(KERNEL_SRC)/../sm6435-modules/motorola/drivers/input/touchscreen/ilitek_v4_mmi \
+		-I$(KERNEL_SRC)/../sm6435-modules/motorola/drivers/input/touchscreen/ilitek_v4_mmi/firmware
 
 ifeq ($(filter m y, $(CONFIG_TOUCHSCREEN_ILITEK_CHIPSET)),)
 	obj-m += ilitek_v4_mmi.o
@@ -10,7 +10,7 @@ endif
 
 ifneq ($(filter m y,$(CONFIG_INPUT_ILI_ENABLE_DOUBLE_TAP)),)
 	EXTRA_CFLAGS += -DILI_SENSOR_EN
-	KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/motorola/drivers/sensors/Module.symvers
+	KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/motorola/drivers/sensors/Module.symvers
 endif
 
 ifneq ($(filter m y, $(CONFIG_BOARD_USES_DOUBLE_TAP_CTRL)),)
@@ -77,7 +77,7 @@ ilitek_v4_mmi-objs += ilitek_v3_mp.o
 ilitek_v4_mmi-objs += ilitek_v3_hostdl.o
 ilitek_v4_mmi-objs += ilitek_v3_node.o
 ifneq ($(findstring touchscreen_mmi.ko,$(BOARD_VENDOR_KERNEL_MODULES)),)
-	KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/motorola/drivers/input/touchscreen/touchscreen_mmi/Module.symvers
+	KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/motorola/drivers/input/touchscreen/touchscreen_mmi/Module.symvers
 endif
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/motorola/drivers/mmi_info/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/qcom/opensource/display-drivers/msm/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/motorola/drivers/mmi_info/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/qcom/opensource/display-drivers/msm/Module.symvers

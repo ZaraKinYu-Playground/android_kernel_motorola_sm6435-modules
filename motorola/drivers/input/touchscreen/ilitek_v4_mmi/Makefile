@@ -14,9 +14,9 @@ clean:
 	rm -f *.o *.ko *.mod.c *.mod.o *~ .*.cmd Module.symvers
 	rm -rf .tmp_versions
 
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/motorola/drivers/mmi_info/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/motorola/drivers/input/touchscreen/touchscreen_mmi/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/qcom/opensource/display-drivers/msm/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/motorola/drivers/mmi_info/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/motorola/drivers/input/touchscreen/touchscreen_mmi/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/qcom/opensource/display-drivers/msm/Module.symvers
 
 else
 KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build

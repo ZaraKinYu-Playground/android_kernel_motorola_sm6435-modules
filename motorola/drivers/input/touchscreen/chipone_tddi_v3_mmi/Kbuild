@@ -1,7 +1,7 @@
 # add -Wall to try to catch everything we can.
 EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/include \
-		-I$(KERNEL_SRC)/../sm8450-modules/motorola/drivers/input/touchscreen/chipone_tddi_v3_mmi
+EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm6435-modules/motorola/include \
+		-I$(KERNEL_SRC)/../sm6435-modules/motorola/drivers/input/touchscreen/chipone_tddi_v3_mmi
 ifneq ($(filter m y,$(CONFIG_CHIPONE_ESD)),)
 EXTRA_CFLAGS += -DCONFIG_CTS_ESD_PROTECTION
 endif
@@ -75,5 +75,5 @@ chipone_tddi_v3_mmi-objs += cts_sysfs.o
 chipone_tddi_v3_mmi-objs += cts_strerror.o
 chipone_tddi_v3_mmi-objs += cts_oem.o
 #KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../touchscreen_mmi/$(GKI_OBJ_MODULE_DIR)/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/motorola/drivers/mmi_info/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm8450-modules/qcom/opensource/display-drivers/msm/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/motorola/drivers/mmi_info/Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(objtree)/../sm6435-modules/qcom/opensource/display-drivers/msm/Module.symvers

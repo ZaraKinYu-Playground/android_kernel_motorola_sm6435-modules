@@ -7,7 +7,7 @@ KERNEL_PLATFORM_PATH = $(shell find $(ANDROID_BUILD_TOP) -maxdepth 1 -name "kern
 # add -Wall to try to catch everything we can.
 EXTRA_CFLAGS += -I$(srctree)/drivers/base
 EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/include
+EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm6435-modules/motorola/include
 
 ifneq ($(filter m y,$(CONFIG_SX937X_USB_CAL)),)
 	EXTRA_CFLAGS += -DCONFIG_CAPSENSE_USB_CAL

@@ -1,4 +1,4 @@
 EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm8450-modules/motorola/include
+EXTRA_CFLAGS += -I$(KERNEL_SRC)/../sm6435-modules/motorola/include
 
 obj-m	+= aw37501.o
