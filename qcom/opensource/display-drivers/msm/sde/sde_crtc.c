@@ -93,11 +93,6 @@ static int sde_crtc_vm_release_handler(struct drm_crtc *crtc_drm,
 static int sde_crtc_opr_event_handler(struct drm_crtc *crtc_drm,
 	bool en, struct sde_irq_callback *irq);
 
-static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
-		struct drm_crtc_state *state,
-		struct drm_property *property,
-		uint64_t val);
-
 static struct sde_crtc_custom_events custom_events[] = {
 	{DRM_EVENT_AD_BACKLIGHT, sde_cp_ad_interrupt},
 	{DRM_EVENT_CRTC_POWER, sde_crtc_power_interrupt_handler},
@@ -295,14 +290,16 @@ static void sde_crtc_calc_fps(struct sde_crtc *sde_crtc)
 			sde_crtc->fps_info.last_sampled_time_us);
 	sde_crtc->fps_info.frame_count++;
 
-	if (diff_us >= DEFAULT_FPS_PERIOD_1_SEC) {
+	if (diff_us >= sde_crtc->fps_info.fps_periodic_duration) {
 
 		 /* Multiplying with 10 to get fps in floating point */
 		fps = ((u64)sde_crtc->fps_info.frame_count)
 						* DEFAULT_FPS_PERIOD_1_SEC * 10;
 		do_div(fps, diff_us);
 		sde_crtc->fps_info.measured_fps = (unsigned int)fps;
-		SDE_DEBUG(" FPS for crtc%d is %d.%d\n",
+		if (sde_crtc->fps_info.fps_log_enable)
+		    SDE_INFO(" FPS for last (%llums, %d frames) of crtc%d is %d.%d\n",
+				diff_us/1000, sde_crtc->fps_info.frame_count,
 				sde_crtc->base.base.id, (unsigned int)fps/10,
 				(unsigned int)fps%10);
 		sde_crtc->fps_info.last_sampled_time_us = current_time_us;
@@ -436,6 +433,34 @@ static ssize_t fps_periodicity_ms_show(struct device *device,
 
 	return scnprintf(buf, PAGE_SIZE, "%d\n",
 		(sde_crtc->fps_info.fps_periodic_duration)/MILI_TO_MICRO);
+}
+
+static ssize_t measured_fps_store(struct device *device,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct drm_crtc *crtc;
+	struct sde_crtc *sde_crtc;
+	int res;
+
+	/* Base of the input */
+	int cnt = 10;
+
+	if (!device || !buf) {
+		SDE_ERROR("invalid input param(s)\n");
+		return -EAGAIN;
+	}
+
+	crtc = dev_get_drvdata(device);
+	if (!crtc)
+		return -EINVAL;
+
+	sde_crtc = to_sde_crtc(crtc);
+
+	res = kstrtou32(buf, cnt, &sde_crtc->fps_info.fps_log_enable);
+	if (res < 0)
+		return res;
+
+	return count;
 }
 
 static ssize_t measured_fps_show(struct device *device,
@@ -577,7 +602,7 @@ static ssize_t retire_frame_event_show(struct device *device,
 }
 
 static DEVICE_ATTR_RO(vsync_event);
-static DEVICE_ATTR_RO(measured_fps);
+static DEVICE_ATTR_RW(measured_fps);
 static DEVICE_ATTR_RW(fps_periodicity_ms);
 static DEVICE_ATTR_RO(retire_frame_event);
 
@@ -4965,9 +4990,6 @@ static void _sde_crtc_reserve_resource(struct drm_crtc *crtc, struct drm_connect
  */
 static struct drm_crtc_state *sde_crtc_duplicate_state(struct drm_crtc *crtc)
 {
-	struct sde_kms *sde_kms;
-	struct drm_device *dev;
-	struct drm_property *drm_prop;
 	struct sde_crtc *sde_crtc;
 	struct sde_crtc_state *cstate, *old_cstate;
 
@@ -4976,15 +4998,8 @@ static struct drm_crtc_state *sde_crtc_duplicate_state(struct drm_crtc *crtc)
 		return NULL;
 	}
 
-	sde_kms = _sde_crtc_get_kms(crtc);
-	if (!sde_kms) {
-		SDE_ERROR("invalid kms\n");
-		return NULL;
-	}
-
 	sde_crtc = to_sde_crtc(crtc);
 	old_cstate = to_sde_crtc_state(crtc->state);
-	dev = crtc->dev;
 
 	if (old_cstate->cont_splash_populated) {
 		crtc->state->plane_mask = 0;
@@ -5005,14 +5020,6 @@ static struct drm_crtc_state *sde_crtc_duplicate_state(struct drm_crtc *crtc)
 			old_cstate, cstate,
 			&cstate->property_state, cstate->property_values);
 	sde_cp_duplicate_state_info(&old_cstate->base, &cstate->base);
-
-	if (!atomic_read(&dev->open_count) && sde_vm_owns_hw(sde_kms) &&
-			sde_in_trusted_vm(sde_kms)) {
-		drm_prop = msm_property_index_to_drm_property(
-				&sde_crtc->property_info, CRTC_PROP_VM_REQ_STATE);
-		sde_crtc_atomic_set_property(crtc, &cstate->base,
-				drm_prop, VM_REQ_RELEASE);
-	}
 
 	/* duplicate base helper */
 	__drm_atomic_helper_crtc_duplicate_state(crtc, &cstate->base);

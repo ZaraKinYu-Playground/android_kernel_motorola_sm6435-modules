@@ -82,11 +82,7 @@ LINUX_INC +=	-I$(DISPLAY_ROOT) \
 	-I$(DISPLAY_ROOT)/msm/dsi \
 	-I$(DISPLAY_ROOT)/msm/sde \
 	-I$(DISPLAY_ROOT)/../mm-drivers/hw_fence/include \
-	-I$(DISPLAY_ROOT)/../mm-drivers/msm_ext_display/include \
 	-I$(DISPLAY_ROOT)/../mm-drivers/sync_fence/include \
-	-I$(DISPLAY_ROOT)/../securemsm-kernel \
-	-I$(DISPLAY_ROOT)/../synx-kernel/include/uapi/synx/media \
-	-I$(DISPLAY_ROOT)/../synx-kernel/msm/synx \
 	-I$(DISPLAY_ROOT)/include/uapi/display \
 
 CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
@@ -105,6 +101,13 @@ ccflags-y += $(LINUX_INC)
 
 ifeq ($(call cc-option-yn, -Wmaybe-uninitialized),y)
 EXTRA_CFLAGS += -Wmaybe-uninitialized
+endif
+
+ifeq ($(CONFIG_HDCP_QSEECOM), y)
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/display-drivers/hdcp/Module.symvers
+endif
+ifeq ($(CONFIG_DRM_MSM), y)
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/display-drivers/msm/Module.symvers
 endif
 
 ifeq ($(call cc-option-yn, -Wheader-guard),y)
@@ -192,6 +195,7 @@ msm_drm-$(CONFIG_DRM_MSM_SDE) += sde/sde_crtc.o \
 				 sde/sde_core_perf.o \
 				 sde/sde_rm.o \
 				 sde/sde_kms_utils.o \
+				 sde/sde_motUtil.o \
 				 sde/sde_kms.o \
 				 sde/sde_plane.o \
 				 sde/sde_connector.o \
@@ -263,7 +267,8 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += dsi/dsi_phy.o \
 				 dsi/dsi_display.o \
 				 dsi/dsi_panel.o \
 				 dsi/dsi_clk_manager.o \
-				 dsi/dsi_display_test.o
+				 dsi/dsi_display_test.o \
+				 dsi/dsi_display_mot_ext.o
 
 msm_drm-$(CONFIG_DSI_PARSER) += dsi/dsi_parser.o
 
@@ -277,4 +282,6 @@ msm_drm-$(CONFIG_DRM_MSM) += msm_atomic.o \
 			     msm_gem_vma.o \
 			     msm_smmu.o \
 			     msm_prop.o
+
+CDEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"
 

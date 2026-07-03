@@ -2808,7 +2808,7 @@ static void sde_encoder_virt_mode_set(struct drm_encoder *drm_enc,
 	int i = 0, ret;
 	int num_lm, num_intf, num_pp_per_intf;
 
-	if (!drm_enc) {
+	if (!drm_enc || !drm_enc->crtc) {
 		SDE_ERROR("invalid encoder\n");
 		return;
 	}
@@ -3795,6 +3795,9 @@ static void sde_encoder_underrun_callback(struct drm_encoder *drm_enc,
 			sde_enc->cur_master->ops.get_underrun_line_count)
 		sde_enc->cur_master->ops.get_underrun_line_count(
 				sde_enc->cur_master);
+
+	pr_warn("Underrun detected count:%d",
+                atomic_read(&phy_enc->underrun_cnt));
 
 	trace_sde_encoder_underrun(DRMID(drm_enc),
 		atomic_read(&phy_enc->underrun_cnt));
@@ -5556,38 +5559,6 @@ static int sde_encoder_virt_add_phys_encs(
 	++sde_enc->num_phys_encs;
 
 	return 0;
-}
-
-/**
- * sde_encoder_get_clones - Calculate the possible_clones for SDE encoder
- * @sde_enc:        DRM encoder pointer
- * Returns:         possible_clones mask
- */
-uint32_t sde_encoder_get_clones(struct drm_encoder *drm_enc)
-{
-	struct drm_encoder *curr;
-	int type = drm_enc->encoder_type;
-	uint32_t clone_mask = drm_encoder_mask(drm_enc);
-
-	/*
-	 * Set writeback as possible clones of real-time DSI encoders and vice
-	 * versa
-	 *
-	 * Writeback encoders can't be clones of each other and DSI
-	 * encoders can't be clones of each other.
-	 *
-	 * TODO: Add DP encoders as valid possible clones for writeback encoders
-	 * (and vice versa) once concurrent writeback has been validated for DP
-	 */
-	drm_for_each_encoder(curr, drm_enc->dev) {
-		if ((type == DRM_MODE_ENCODER_VIRTUAL &&
-				curr->encoder_type != DRM_MODE_ENCODER_VIRTUAL) ||
-				(type != DRM_MODE_ENCODER_VIRTUAL &&
-				curr->encoder_type == DRM_MODE_ENCODER_VIRTUAL))
-			clone_mask |= drm_encoder_mask(curr);
-	}
-
-	return clone_mask;
 }
 
 static int sde_encoder_virt_add_phys_enc_wb(struct sde_encoder_virt *sde_enc,
