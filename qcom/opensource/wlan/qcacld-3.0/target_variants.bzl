@@ -6,15 +6,12 @@ targets = [
     "pitti",
     "pitti_32go",
     "parrot",
-    "bengal",
-    "malabar",
 ]
 
 la_variants = [
     # keep sorted
     "consolidate",
     "perf",
-    "gki",
 ]
 
 le_targets = [
@@ -38,7 +35,6 @@ vm_target_bases = [
     "pitti",
     "pitti_32go",
     "parrot",
-    "malabar",
 ]
 
 vm_targets = ["{}-{}".format(t, vt) for t in vm_target_bases for vt in vm_types]

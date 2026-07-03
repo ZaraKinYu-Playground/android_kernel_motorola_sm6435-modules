@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -434,19 +434,6 @@ QDF_STATUS wma_set_sar_limit(WMA_HANDLE handle,
 		struct sar_limit_cmd_params *sar_limit_params);
 
 /**
- * wma_set_tx_power_per_mcs() - set tx power per mcs in the target
- * @handle: wma handle
- * @txpower_adjust_params: adjust txpower per mcs cmd params
- *
- * This function sends WMI command to adjust txpower per mcs.
- *
- * Return: QDF_STATUS enumeration
- */
-QDF_STATUS wma_set_tx_power_per_mcs(
-		WMA_HANDLE handle,
-		struct tx_power_per_mcs_rate *txpower_adjust_params);
-
-/**
  * wma_send_coex_config_cmd() - Send coex config params
  * @wma_handle: wma handle
  * @coex_cfg_params: struct to coex cofig params
@@ -552,18 +539,15 @@ QDF_STATUS wma_enable_active_apf_mode(WMA_HANDLE handle, tAniDHCPInd *ta_dhcp_in
  */
 QDF_STATUS wma_disable_active_apf_mode(WMA_HANDLE handle, tAniDHCPInd *ta_dhcp_ind);
 #else
-static inline
-QDF_STATUS wma_enable_active_apf_mode(WMA_HANDLE handle,
-				      tAniDHCPInd *ta_dhcp_ind)
+
+QDF_STATUS wma_enable_active_apf_mode(WMA_HANDLE handle, tAniDHCPInd *ta_dhcp_ind)
 {
-	return QDF_STATUS_E_NOSUPPORT;
+	return QDF_STATUS_SUCCESS;
 }
 
-static inline
-QDF_STATUS wma_disable_active_apf_mode(WMA_HANDLE handle,
-				       tAniDHCPInd *ta_dhcp_ind)
+QDF_STATUS wma_disable_active_apf_mode(WMA_HANDLE handle, tAniDHCPInd *ta_dhcp_ind)
 {
-	return QDF_STATUS_E_NOSUPPORT;
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
