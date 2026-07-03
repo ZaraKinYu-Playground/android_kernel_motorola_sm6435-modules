@@ -2,7 +2,7 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -4878,8 +4878,6 @@ static int ipa3_q6_clean_q6_flt_tbls(enum ipa_ip_type ip,
 	struct ipahal_reg_valmask valmask;
 	struct ipahal_imm_cmd_register_write reg_write_coal_close;
 	int coal_ep = IPA_EP_NOT_ALLOCATED;
-	gfp_t mem_flag;
-	uint8_t retry_count = 0;
 
 	IPADBG("Entry\n");
 
@@ -4897,30 +4895,14 @@ static int ipa3_q6_clean_q6_flt_tbls(enum ipa_ip_type ip,
 		return retval;
 	}
 
-	if (in_atomic()) {
-		mem_flag = GFP_ATOMIC;
-		ipa3_ctx->stats.ssr_mem_alloc_atomic++;
-	} else {
-		mem_flag = GFP_KERNEL;
-		ipa3_ctx->stats.ssr_mem_alloc_non_atomic++;
-	}
-
-	for (retry_count = 0; retry_count < MAX_RETRY_ALLOC; retry_count++) {
-		/* Up to filtering pipes we have filtering tables + 1 for coal close */
-		desc = kcalloc(ipa3_ctx->ep_flt_num + 1, sizeof(struct ipa3_desc),
-			mem_flag);
-		if (desc)
-			break;
-	}
+	/* Up to filtering pipes we have filtering tables + 1 for coal close */
+	desc = kcalloc(ipa3_ctx->ep_flt_num + 1, sizeof(struct ipa3_desc),
+		GFP_ATOMIC);
 	if (!desc)
 		return -ENOMEM;
 
-	for (retry_count = 0; retry_count < MAX_RETRY_ALLOC; retry_count++) {
-		cmd_pyld = kcalloc(ipa3_ctx->ep_flt_num + 1,
-			sizeof(struct ipahal_imm_cmd_pyld *), mem_flag);
-		if (cmd_pyld)
-			break;
-	}
+	cmd_pyld = kcalloc(ipa3_ctx->ep_flt_num + 1,
+		sizeof(struct ipahal_imm_cmd_pyld *), GFP_ATOMIC);
 	if (!cmd_pyld) {
 		retval = -ENOMEM;
 		goto free_desc;
@@ -4945,7 +4927,7 @@ static int ipa3_q6_clean_q6_flt_tbls(enum ipa_ip_type ip,
 	}
 
 	retval = ipahal_flt_generate_empty_img(1, lcl_hdr_sz, lcl_hdr_sz,
-		0, &mem, (mem_flag == GFP_ATOMIC) ? true : false);
+		0, &mem, true);
 	if (retval) {
 		IPAERR("failed to generate flt single tbl empty img\n");
 		goto free_cmd_pyld;
@@ -4973,7 +4955,7 @@ static int ipa3_q6_clean_q6_flt_tbls(enum ipa_ip_type ip,
 			&reg_write_coal_close, false);
 		if (!cmd_pyld[num_cmds]) {
 			IPAERR("failed to construct coal close IC\n");
-			retval = -EINVAL;
+			retval = -ENOMEM;
 			goto free_empty_img;
 		}
 		ipa3_init_imm_cmd_desc(&desc[num_cmds], cmd_pyld[num_cmds]);
@@ -5016,7 +4998,7 @@ static int ipa3_q6_clean_q6_flt_tbls(enum ipa_ip_type ip,
 				IPA_IMM_CMD_DMA_SHARED_MEM, &cmd, false);
 			if (!cmd_pyld[num_cmds]) {
 				IPAERR("fail construct dma_shared_mem cmd\n");
-				retval = -EINVAL;
+				retval = -ENOMEM;
 				goto free_empty_img;
 			}
 			ipa3_init_imm_cmd_desc(&desc[num_cmds],
@@ -5061,8 +5043,6 @@ static int ipa3_q6_clean_q6_rt_tbls(enum ipa_ip_type ip,
 	struct ipahal_reg_valmask valmask;
 	struct ipahal_imm_cmd_register_write reg_write_coal_close;
 	int i;
-	gfp_t mem_flag;
-	uint8_t retry_count = 0;
 
 	IPADBG("Entry\n");
 
@@ -5102,37 +5082,21 @@ static int ipa3_q6_clean_q6_rt_tbls(enum ipa_ip_type ip,
 		}
 	}
 
-	if (in_atomic()) {
-		mem_flag = GFP_ATOMIC;
-		ipa3_ctx->stats.ssr_mem_alloc_atomic++;
-	} else {
-		mem_flag = GFP_KERNEL;
-		ipa3_ctx->stats.ssr_mem_alloc_non_atomic++;
-	}
-
 	retval = ipahal_rt_generate_empty_img(
 		modem_rt_index_hi - modem_rt_index_lo + 1,
-		lcl_hdr_sz, lcl_hdr_sz, &mem, (mem_flag == GFP_ATOMIC) ? true : false);
+		lcl_hdr_sz, lcl_hdr_sz, &mem, true);
 	if (retval) {
 		IPAERR("fail generate empty rt img\n");
 		return -ENOMEM;
 	}
 
-	for (retry_count = 0; retry_count < MAX_RETRY_ALLOC; retry_count++) {
-		desc = kcalloc(2, sizeof(struct ipa3_desc), mem_flag);
-		if (desc)
-			break;
-	}
+	desc = kcalloc(2, sizeof(struct ipa3_desc), GFP_ATOMIC);
 	if (!desc) {
 		retval = -ENOMEM;
 		goto free_empty_img;
 	}
 
-	for (retry_count = 0; retry_count < MAX_RETRY_ALLOC; retry_count++) {
-		cmd_pyld = kcalloc(2, sizeof(struct ipahal_imm_cmd_pyld *), mem_flag);
-		if (cmd_pyld)
-			break;
-	}
+	cmd_pyld = kcalloc(2, sizeof(struct ipahal_imm_cmd_pyld *), GFP_ATOMIC);
 	if (!cmd_pyld) {
 		retval = -ENOMEM;
 		goto free_desc;
@@ -5161,7 +5125,7 @@ static int ipa3_q6_clean_q6_rt_tbls(enum ipa_ip_type ip,
 			&reg_write_coal_close, false);
 		if (!cmd_pyld[num_cmds]) {
 			IPAERR("failed to construct coal close IC\n");
-			retval = -EINVAL;
+			retval = -ENOMEM;
 			goto free_cmd_pyld;
 		}
 		ipa3_init_imm_cmd_desc(&desc[num_cmds], cmd_pyld[num_cmds]);
@@ -5180,7 +5144,7 @@ static int ipa3_q6_clean_q6_rt_tbls(enum ipa_ip_type ip,
 			IPA_IMM_CMD_DMA_SHARED_MEM, &cmd, false);
 	if (!cmd_pyld[num_cmds]) {
 		IPAERR("failed to construct dma_shared_mem imm cmd\n");
-		retval = -EINVAL;
+		retval = -ENOMEM;
 		goto free_cmd_pyld;
 	}
 	ipa3_init_imm_cmd_desc(&desc[num_cmds], cmd_pyld[num_cmds]);
@@ -5364,23 +5328,9 @@ static int ipa3_q6_set_ex_path_to_apps(void)
 	struct ipahal_reg_valmask valmask;
 	struct ipahal_imm_cmd_register_write reg_write_coal_close;
 	int i;
-	gfp_t mem_flag;
-	uint8_t retry_count = 0;
 
-	if (in_atomic()) {
-		mem_flag = GFP_ATOMIC;
-		ipa3_ctx->stats.ssr_mem_alloc_atomic++;
-	} else {
-		mem_flag = GFP_KERNEL;
-		ipa3_ctx->stats.ssr_mem_alloc_non_atomic++;
-	}
-
-	for (retry_count = 0; retry_count < MAX_RETRY_ALLOC; retry_count++) {
-		desc = kcalloc(ipa3_ctx->ipa_num_pipes + 1, sizeof(struct ipa3_desc),
-			mem_flag);
-		if (desc)
-			break;
-	}
+	desc = kcalloc(ipa3_ctx->ipa_num_pipes + 1, sizeof(struct ipa3_desc),
+			GFP_ATOMIC);
 	if (!desc)
 		return -ENOMEM;
 
@@ -5408,7 +5358,7 @@ static int ipa3_q6_set_ex_path_to_apps(void)
 		if (!cmd_pyld) {
 			IPAERR("failed to construct coal close IC\n");
 			ipa_assert();
-			return -EINVAL;
+			return -ENOMEM;
 		}
 		ipa3_init_imm_cmd_desc(&desc[num_descs], cmd_pyld);
 		desc[num_descs].callback = ipa3_destroy_imm;
@@ -5446,7 +5396,7 @@ static int ipa3_q6_set_ex_path_to_apps(void)
 			if (!cmd_pyld) {
 				IPAERR("fail construct register_write cmd\n");
 				ipa_assert();
-				return -EINVAL;
+				return -ENOMEM;
 			}
 
 			ipa3_init_imm_cmd_desc(&desc[num_descs], cmd_pyld);
