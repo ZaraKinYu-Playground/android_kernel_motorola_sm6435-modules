@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2025, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -882,7 +882,9 @@ static void adreno_dispatcher_issuecmds(struct adreno_device *adreno_dev)
 	spin_unlock(&device->submit_lock);
 
 	/* If the dispatcher is busy then schedule the work for later */
-	if (!mutex_trylock(&dispatcher->mutex)) {
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	if (!rt_mutex_trylock(&dispatcher->mutex)) {
+	// END IKSWW-34321
 		_decrement_submit_now(device);
 		goto done;
 	}
@@ -892,7 +894,9 @@ static void adreno_dispatcher_issuecmds(struct adreno_device *adreno_dev)
 	if (dispatcher->inflight)
 		_dispatcher_update_timers(adreno_dev);
 
-	mutex_unlock(&dispatcher->mutex);
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	rt_mutex_unlock(&dispatcher->mutex);
+	// END IKSWW-34321
 	_decrement_submit_now(device);
 	return;
 done:
@@ -2338,7 +2342,9 @@ static void adreno_dispatcher_work(struct kthread_work *work)
 	int count = 0;
 	unsigned int i = 0;
 
-	mutex_lock(&dispatcher->mutex);
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	rt_mutex_lock(&dispatcher->mutex);
+	// END IKSWW-34321
 
 	/*
 	 * As long as there are inflight commands, process retired comamnds from
@@ -2379,7 +2385,9 @@ static void adreno_dispatcher_work(struct kthread_work *work)
 	else
 		_dispatcher_power_down(adreno_dev);
 
-	mutex_unlock(&dispatcher->mutex);
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	rt_mutex_unlock(&dispatcher->mutex);
+	// END IKSWW-34321
 }
 
 /*
@@ -2400,7 +2408,7 @@ static void adreno_dispatcher_queue_context(struct adreno_device *adreno_dev,
  */
 static void adreno_dispatcher_timer(struct timer_list *t)
 {
-	struct adreno_dispatcher *dispatcher = kgsl_timer_container_of(dispatcher, t, timer);
+	struct adreno_dispatcher *dispatcher = from_timer(dispatcher, t, timer);
 	struct adreno_device *adreno_dev = container_of(dispatcher,
 					struct adreno_device, dispatcher);
 
@@ -2547,7 +2555,9 @@ static void adreno_dispatcher_close(struct adreno_device *adreno_dev)
 	int i;
 	struct adreno_ringbuffer *rb;
 
-	mutex_lock(&dispatcher->mutex);
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	rt_mutex_lock(&dispatcher->mutex);
+	// END IKSWW-34321
 	del_timer_sync(&dispatcher->timer);
 
 	FOR_EACH_RINGBUFFER(adreno_dev, rb, i) {
@@ -2561,7 +2571,9 @@ static void adreno_dispatcher_close(struct adreno_device *adreno_dev)
 		}
 	}
 
-	mutex_unlock(&dispatcher->mutex);
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	rt_mutex_unlock(&dispatcher->mutex);
+	// END IKSWW-34321
 
 	kthread_destroy_worker(adreno_dev->scheduler_worker);
 
@@ -2736,7 +2748,9 @@ int adreno_dispatcher_init(struct adreno_device *adreno_dev)
 
 	WARN_ON(sysfs_create_files(&device->dev->kobj, _dispatch_attr_list));
 
-	mutex_init(&dispatcher->mutex);
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	rt_mutex_init(&dispatcher->mutex);
+	// END IKSWW-34321
 
 	timer_setup(&dispatcher->timer, adreno_dispatcher_timer, 0);
 
@@ -2784,8 +2798,10 @@ int adreno_dispatcher_idle(struct adreno_device *adreno_dev)
 	 * mutex is held and device is started
 	 */
 
-	if (WARN_ON(mutex_is_locked(&dispatcher->mutex)))
+	// BEGIN Motorola, chentao8, 18/08/2025, IKSWW-34321
+	if (WARN_ON(rt_mutex_base_is_locked(&dispatcher->mutex.rtmutex)))
 		return -EDEADLK;
+	// END IKSWW-34321
 
 	adreno_get_gpu_halt(adreno_dev);
 

@@ -37,7 +37,6 @@
 #include "kgsl_sync.h"
 #include "kgsl_sysfs.h"
 #include "kgsl_trace.h"
-#include "kgsl_util.h"
 /* Instantiate tracepoints */
 #define CREATE_TRACE_POINTS
 #include "kgsl_power_trace.h"
@@ -1114,7 +1113,7 @@ static void _log_gpu_work_events(struct work_struct *work)
 
 static void kgsl_work_period_timer(struct timer_list *t)
 {
-	struct kgsl_device *device = kgsl_timer_container_of(device, t, work_period_timer);
+	struct kgsl_device *device = from_timer(device, t, work_period_timer);
 
 	queue_work(kgsl_driver.lockless_workqueue, &device->work_period_ws);
 }
@@ -3028,15 +3027,16 @@ static int kgsl_setup_anon_useraddr(struct kgsl_device *device, struct kgsl_page
 	entry->memdesc.ops = &kgsl_usermem_ops;
 
 	if (kgsl_memdesc_use_cpu_map(&entry->memdesc)) {
+
 		/* Register the address in the database */
 		ret = kgsl_mmu_set_svm_region(pagetable,
-			&entry->memdesc, (uint64_t) hostptr, (uint64_t) size);
+			(uint64_t) hostptr, (uint64_t) size);
 
 		/* if OOM, retry once after flushing lockless_workqueue */
 		if (ret == -ENOMEM) {
 			flush_workqueue(kgsl_driver.lockless_workqueue);
 			ret = kgsl_mmu_set_svm_region(pagetable,
-				&entry->memdesc, (uint64_t) hostptr, (uint64_t) size);
+				(uint64_t) hostptr, (uint64_t) size);
 		}
 
 		if (ret)
@@ -4701,11 +4701,29 @@ static unsigned long _gpu_set_svm_region(struct kgsl_process_private *private,
 {
 	int ret;
 
-	ret = kgsl_mmu_set_svm_region(private->pagetable,  &entry->memdesc,
-		(uint64_t) addr, (uint64_t) size);
+	/*
+	 * Protect access to the gpuaddr here to prevent multiple vmas from
+	 * trying to map a SVM region at the same time
+	 */
+	spin_lock(&entry->memdesc.lock);
 
-	if (ret != 0)
+	if (entry->memdesc.gpuaddr) {
+		spin_unlock(&entry->memdesc.lock);
+		return (unsigned long) -EBUSY;
+	}
+
+	ret = kgsl_mmu_set_svm_region(private->pagetable, (uint64_t) addr,
+		(uint64_t) size);
+
+	if (ret != 0) {
+		spin_unlock(&entry->memdesc.lock);
 		return (unsigned long) ret;
+	}
+
+	entry->memdesc.gpuaddr = (uint64_t) addr;
+	spin_unlock(&entry->memdesc.lock);
+
+	entry->memdesc.pagetable = private->pagetable;
 
 	ret = kgsl_mmu_map(private->pagetable, &entry->memdesc);
 	if (ret) {
@@ -4719,9 +4737,9 @@ static unsigned long _gpu_set_svm_region(struct kgsl_process_private *private,
 	return addr;
 }
 
-unsigned long kgsl_get_align(struct kgsl_memdesc *memdesc)
+static unsigned long get_align(struct kgsl_mem_entry *entry)
 {
-	u32 bit = kgsl_memdesc_get_align(memdesc);
+	int bit = kgsl_memdesc_get_align(&entry->memdesc);
 
 	if (bit >= ilog2(SZ_2M))
 		return SZ_2M;
@@ -4730,7 +4748,7 @@ unsigned long kgsl_get_align(struct kgsl_memdesc *memdesc)
 	else if (bit >= ilog2(SZ_64K))
 		return SZ_64K;
 
-	return PAGE_SIZE;
+	return SZ_4K;
 }
 
 static unsigned long set_svm_area(struct file *file,
@@ -4763,7 +4781,7 @@ static unsigned long get_svm_unmapped_area(struct file *file,
 {
 	struct kgsl_device_private *dev_priv = file->private_data;
 	struct kgsl_process_private *private = dev_priv->process_priv;
-	unsigned long align = kgsl_get_align(&entry->memdesc);
+	unsigned long align = get_align(entry);
 	unsigned long ret, iova;
 	u64 start = 0, end = 0;
 	struct vm_area_struct *vma;

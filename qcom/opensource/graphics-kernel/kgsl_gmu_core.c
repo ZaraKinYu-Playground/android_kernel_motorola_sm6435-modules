@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -181,7 +181,7 @@ int gmu_core_timed_poll_check(struct kgsl_device *device,
 		unsigned int offset, unsigned int expected_ret,
 		unsigned int timeout_ms, unsigned int mask)
 {
-	u32 val = 0;
+	u32 val;
 
 	return kgsl_regmap_read_poll_timeout(&device->regmap, offset,
 		val, (val & mask) == expected_ret, 100, timeout_ms * 1000);

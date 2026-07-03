@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -521,6 +521,7 @@ static int a6xx_hwsched_boot(struct adreno_device *adreno_dev)
 {
 	struct a6xx_gmu_device *gmu = to_a6xx_gmu(adreno_dev);
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	bool bcl_state = adreno_dev->bcl_enabled;
 	int ret;
 
 	if (test_bit(GMU_PRIV_GPU_STARTED, &gmu->flags))
@@ -531,10 +532,21 @@ static int a6xx_hwsched_boot(struct adreno_device *adreno_dev)
 	adreno_hwsched_start(adreno_dev);
 
 	if (IS_ENABLED(CONFIG_QCOM_KGSL_HIBERNATION) &&
-		!test_bit(GMU_PRIV_PDC_RSC_LOADED, &gmu->flags))
+		!test_bit(GMU_PRIV_PDC_RSC_LOADED, &gmu->flags)) {
+		/*
+		 * During hibernation entry ZAP was unloaded and
+		 * CBCAST BCL register is in reset state.
+		 * Set bcl_enabled to false to skip KMD's HFI request
+		 * to GMU for BCL feature, send BCL feature request to
+		 * GMU after ZAP load at GPU boot. This ensures that
+		 * Central Broadcast register was programmed before
+		 * enabling BCL.
+		 */
+		adreno_dev->bcl_enabled = false;
 		ret = a6xx_hwsched_gmu_first_boot(adreno_dev);
-	else
+	} else {
 		ret = a6xx_hwsched_gmu_boot(adreno_dev);
+	}
 	if (ret)
 		return ret;
 
@@ -547,6 +559,9 @@ static int a6xx_hwsched_boot(struct adreno_device *adreno_dev)
 	kgsl_pwrscale_wake(device);
 
 	set_bit(GMU_PRIV_GPU_STARTED, &gmu->flags);
+
+	if (IS_ENABLED(CONFIG_QCOM_KGSL_HIBERNATION))
+		adreno_dev->bcl_enabled = bcl_state;
 
 	device->pwrctrl.last_stat_updated = ktime_get();
 
@@ -598,6 +613,17 @@ static int a6xx_hwsched_first_boot(struct adreno_device *adreno_dev)
 
 	set_bit(GMU_PRIV_FIRST_BOOT_DONE, &gmu->flags);
 	set_bit(GMU_PRIV_GPU_STARTED, &gmu->flags);
+
+	/*
+	 * BCL needs respective Central Broadcast register to
+	 * be programed from TZ. This programing happens only
+	 * when zap shader firmware load is successful. Zap firmware
+	 * load can fail in boot up path hence enable BCL only after we
+	 * successfully complete first boot to ensure that Central
+	 * Broadcast register was programed before enabling BCL.
+	 */
+	if (ADRENO_FEATURE(adreno_dev, ADRENO_BCL))
+		adreno_dev->bcl_enabled = true;
 
 	/*
 	 * There is a possible deadlock scenario during kgsl firmware reading
@@ -883,7 +909,7 @@ static int a6xx_hwsched_pm_suspend(struct adreno_device *adreno_dev)
 {
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct a6xx_gmu_device *gmu = to_a6xx_gmu(adreno_dev);
-	int ret, active_count;
+	int ret;
 
 	if (test_bit(GMU_PRIV_PM_SUSPEND, &gmu->flags))
 		return 0;
@@ -906,16 +932,6 @@ static int a6xx_hwsched_pm_suspend(struct adreno_device *adreno_dev)
 	ret = adreno_hwsched_idle(adreno_dev);
 	if (ret)
 		goto err;
-
-	active_count = atomic_read(&device->active_cnt);
-
-	if (active_count > 0) {
-		ret = -ETIMEDOUT;
-		dev_err_ratelimited(GMU_PDEV_DEV(device),
-			"Aborting suspend because of active count:%d\n",
-			active_count);
-		goto err;
-	}
 
 	a6xx_hwsched_power_off(adreno_dev);
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/iommu.h>
@@ -2694,7 +2694,7 @@ static void gen7_hwsched_hw_fence_timeout(struct work_struct *work)
 
 static void gen7_hwsched_hw_fence_timer(struct timer_list *t)
 {
-	struct gen7_hwsched_hfi *hfi = kgsl_timer_container_of(hfi, t, hw_fence_timer);
+	struct gen7_hwsched_hfi *hfi = from_timer(hfi, t, hw_fence_timer);
 
 	kgsl_schedule_work(&hfi->hw_fence_ws);
 }
@@ -3086,7 +3086,7 @@ static void move_detached_context_hardware_fences(struct adreno_device *adreno_d
 	struct adreno_hw_fence_entry *entry, *tmp;
 	struct gen7_hwsched_hfi *hfi = to_gen7_hwsched_hfi(adreno_dev);
 
-	spin_lock(&drawctxt->lock);
+	/* We don't need the drawctxt lock here because this context has already been detached */
 	list_for_each_entry_safe(entry, tmp, &drawctxt->hw_fence_inflight_list, node) {
 		struct gmu_context_queue_header *hdr =  drawctxt->gmu_context_queue.hostptr;
 
@@ -3098,8 +3098,6 @@ static void move_detached_context_hardware_fences(struct adreno_device *adreno_d
 
 		adreno_hwsched_remove_hw_fence_entry(adreno_dev, entry);
 	}
-
-	spin_unlock(&drawctxt->lock);
 
 	/* Also grab all the hardware fences which were never sent to GMU */
 	list_for_each_entry_safe(entry, tmp, &drawctxt->hw_fence_list, node) {
@@ -3121,28 +3119,21 @@ static int check_detached_context_hardware_fences(struct adreno_device *adreno_d
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct adreno_hw_fence_entry *entry, *tmp;
 	int ret = 0;
-	u32 id, ts, fence_ts;
 
-	spin_lock(&drawctxt->lock);
+	/* We don't need the drawctxt lock because this context has been detached */
 	list_for_each_entry_safe(entry, tmp, &drawctxt->hw_fence_inflight_list, node) {
 		struct gmu_context_queue_header *hdr =  drawctxt->gmu_context_queue.hostptr;
 
 		if ((timestamp_cmp((u32)entry->cmd.ts, hdr->out_fence_ts) > 0)) {
-			id = drawctxt->base.id;
-			ts = (u32)entry->cmd.ts;
-			fence_ts = hdr->out_fence_ts;
-
-			spin_unlock(&drawctxt->lock);
 			dev_err(GMU_PDEV_DEV(device),
 				"detached ctx:%d has unsignaled fence ts:%d retired:%d\n",
-			       id, ts, fence_ts);
+				drawctxt->base.id, (u32)entry->cmd.ts, hdr->out_fence_ts);
 			ret = -EINVAL;
 			goto fault;
 		}
 		adreno_hwsched_remove_hw_fence_entry(adreno_dev, entry);
 	}
 
-	spin_unlock(&drawctxt->lock);
 	/* Send hardware fences (to TxQueue) that were not dispatched to GMU */
 	list_for_each_entry_safe(entry, tmp, &drawctxt->hw_fence_list, node) {
 
@@ -4011,7 +4002,7 @@ int gen7_hwsched_counter_inline_enable(struct adreno_device *adreno_dev,
 	struct gen7_hwsched_hfi *hfi = to_gen7_hwsched_hfi(adreno_dev);
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct adreno_perfcount_register *reg = &group->regs[counter];
-	u32 val = 0, *cmds, count = 0;
+	u32 val, *cmds, count = 0;
 	int ret;
 
 	ret = register_global_ctxt(adreno_dev);

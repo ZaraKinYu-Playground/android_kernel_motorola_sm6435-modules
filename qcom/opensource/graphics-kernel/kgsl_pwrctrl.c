@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2010-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2022-2025, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk/qcom.h>
@@ -52,7 +52,6 @@ static const char * const clocks[KGSL_MAX_CLKS] = {
 	"smmu_vote",
 	"apb_pclk",
 	"hub_cx_int_clk",
-	"gpu_cc_memnoc_gfx_clk",
 };
 
 static void kgsl_pwrctrl_clk(struct kgsl_device *device, bool state,
@@ -1561,7 +1560,7 @@ static int kgsl_cx_gdsc_event(struct notifier_block *nb,
 {
 	struct kgsl_pwrctrl *pwr = container_of(nb, struct kgsl_pwrctrl, cx_gdsc_nb);
 	struct kgsl_device *device = container_of(pwr, struct kgsl_device, pwrctrl);
-	u32 val = 0;
+	u32 val;
 
 	if (!pwr->cx_gdsc_wait)
 		return 0;
@@ -2106,7 +2105,7 @@ done:
 
 void kgsl_timer(struct timer_list *t)
 {
-	struct kgsl_device *device = kgsl_timer_container_of(device, t, idle_timer);
+	struct kgsl_device *device = from_timer(device, t, idle_timer);
 
 	if (device->requested_state != KGSL_STATE_SUSPEND) {
 		kgsl_pwrctrl_request_state(device, KGSL_STATE_SLUMBER);

@@ -289,10 +289,10 @@ struct kgsl_memdesc {
 	struct page **pages;
 	unsigned int page_count;
 	/*
-	 * @lock: Mutex to protect the gpuaddr from being accessed by
+	 * @lock: Spinlock to protect the gpuaddr from being accessed by
 	 * multiple entities trying to map the same SVM region at once
 	 */
-	struct mutex lock;
+	spinlock_t lock;
 	/** @shmem_filp: Pointer to the shmem file backing this memdesc */
 	struct file *shmem_filp;
 	/** @ranges: rbtree base for the interval list of vbo ranges */
@@ -566,8 +566,6 @@ long gpumem_free_entry(struct kgsl_mem_entry *entry);
 enum kgsl_mmutype kgsl_mmu_get_mmutype(struct kgsl_device *device);
 
 /* Helper functions */
-unsigned long kgsl_get_align(struct kgsl_memdesc *memdesc);
-
 int kgsl_request_irq(struct platform_device *pdev, const  char *name,
 		irq_handler_t handler, void *data);
 
