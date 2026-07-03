@@ -207,7 +207,6 @@ endif
 
 ifdef CONFIG_SND_SOC_MSM_HDMI_CODEC_RX
 	HDMICODEC_OBJS += msm_hdmi_codec_rx.o
-	CFLAGS_msm_hdmi_codec_rx.o += -I$(AUDIO_ROOT)/../mm-drivers/msm_ext_display/include
 endif
 
 ifdef CONFIG_SND_SOC_WCD_IRQ
@@ -260,6 +259,8 @@ ifeq ($(KERNEL_BUILD), 1)
 	obj-y	+= lpass-cdc/
 	obj-y	+= wsa883x/
 	obj-y	+= rouleur/
+	obj-y	+= aw882xx/
+	obj-y	+= fs1815/
 endif
 # Module information used by KBuild framework
 obj-$(CONFIG_WCD9XXX_CODEC_CORE) += wcd_core_dlkm.o
@@ -298,3 +299,6 @@ hdmi_dlkm-y := $(HDMICODEC_OBJS)
 
 obj-$(CONFIG_SND_SWR_HAPTICS) += swr_haptics_dlkm.o
 swr_haptics_dlkm-y := $(SWR_HAP_OBJS)
+
+# inject some build related information
+DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"
