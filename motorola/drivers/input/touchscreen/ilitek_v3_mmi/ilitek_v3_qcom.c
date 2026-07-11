@@ -1210,8 +1210,8 @@ static int ilitek_plat_probe(void)
 #if defined(CONFIG_FB) || defined(CONFIG_DRM)
 	ret = ili_v3_drm_check_dt(ilits->dev->of_node);
 	if (ret < 0) {
-		ILI_ERR("[ili_v3_drm_check_dt] parse drm-panel fail EPROBE_DEFER");
-		return -EPROBE_DEFER;
+		ILI_ERR("[ili_v3_drm_check_dt] parse drm-panel fail %d", ret);
+		return ret;
 	}
 #endif
 #endif
