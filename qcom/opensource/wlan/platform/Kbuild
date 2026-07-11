@@ -1,6 +1,5 @@
 ifeq ($(CONFIG_ARCH_PARROT), y)
 include \
-	$(WLAN_PLATFORM_ROOT)/cnss2/parrot_gki_defconfig \
 	$(WLAN_PLATFORM_ROOT)/cnss_genl/parrot_gki_defconfig \
 	$(WLAN_PLATFORM_ROOT)/cnss_prealloc/parrot_gki_defconfig \
 	$(WLAN_PLATFORM_ROOT)/cnss_utils/parrot_gki_defconfig \
